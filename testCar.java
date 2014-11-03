@@ -2,9 +2,64 @@ import java.io.*;
 import java.net.*; 
   
 class testCar { 
+  boolean isDangerous = False; 
+
+    public void requestSim(String options){
+      // options
+      // initial == obtain VehicleID, VehiclePOS, VehicleDIR, VehicleVEL
+      // create_EMW == request for unique eventID
+      // carReq == request for car info (position)
+
+      // Create socket connection to the simulator
+
+      if options = initial{ // all cars have to call this to join the network 
+        send somethin
+      }
+      if options = create_EWM{ // only dangerous car, need simulator to keep track of all event ids
+        // parameter = vehicleID
+        // simulator assigns characteristic of an event .....
+        set isDangerous for that vehicle to be True
+      }
+      if options = carReq { // request for car info to calculate distance to it 
+        // parameter = vehicle ID
+      }
+
+    }
+
+    public void broadcastEWM(){
+      // tell simulator it's sending to everyone and simulator will decide who will receive the broadcast?
+
+
+    }
+    public void broadcastACK(){
+      calculate the vehicleID thats furthest away 
+      and then broadcast(furthestID, eventID)
+
+    }
+    public void listenEWM(){
+
+      if is the eventID the one you broadcast?
+        calculate the furthest vehicle from you 
+        broadcastACK()
+      else  
+        if EWM comes from a car behind you or traveling in the opposite direction
+        drop it 
+        else broadcastEWM(eventID)
+
+    }
+    public void listenACK(){
+      if vehicleID == yours 
+        are you broadcasting that eventID?
+
+      return False otherwise
+        stop broadcasting that eventID! 
+    }
+
+
 
     public static void main(String args[]) throws Exception 
     { 
+
      try {
         String serverHostname = new String ("127.0.0.1");
 
