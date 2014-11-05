@@ -1,42 +1,33 @@
-import java.io.*; 
-import java.net.*; 
-class eventId{
-  String Eid;
-  String Vid;
-  int distance;
-} 
-
 /* Pseudo code 1
 //process of broadcast-vehicle-choosing. 
 After broadcast an EWM message with an event-id, 
 wait for period t to receive any messages from behind;
+** THIS IS THE PRIMARYBROADCASTEWM() FUNCTION**
 If (duration<t){ 
-	If (received any EWMs from behind){ 
+	If (received any EWMs from behind  ** THIS IS THE LISTENEWM_RESPONSE() FUNCTION**){   
 		if (event-id is the same) {
-			if (message was received before)  {Ignore message}; 
+			if (Vid was received before)  {Ignore message}; 
 			Else {
-				insert the message into the queue; 
-				Calculate the distance ;
+				record the Vid into the queue and calculate the distance. If distance > prev greatest distance then update the Vid and distance;
 			}
 		}
-		Else {broadcast EWM with this event-id ;}
+		Else {broadcastEWM() with this event-id ;}
 	} 
 	Else {after broadcast an EWM, still wait for a period t ;}
 } 
 
-Else {choose the Vehicle and send ACK; stop broadcast ;}  */
+Else {choose the Vehicle and send ACK; stop broadcast ;  ** THIS IS THE BROADCASTAWK() FUNCTION **  }  */
 
 /*
 // pseudo code 2 
 If (A vehicle received any messages) { 
-	If (messages==EWM) {
+	If (messages==EWM) {  ** THIS IS THE LISTENEWM() FUNCTION **  
 		If (the event-id is the same) {discard ;} 
-		Else broadcast ;
+		Else broadcastEWM() ;
 	} 
-	Else (message==ACK) {
+	Else (message==ACK) {  ** THIS IS THE LISTENAWK() FUNCTION **
 		If (vehicle-id==self ‘vehicle-id) {
-			Periodic broadcast EMW; 
-			Become a chosen broadcast vehicle ;
+			Become a chosen broadcast vehicle aka PRIMARYBROADCASTEWM() ;
 		}
 		Else stop broadcast ;
 	}
@@ -44,9 +35,20 @@ If (A vehicle received any messages) {
 
 */
 
+
+import java.io.*; 
+import java.net.*; 
+class eventId{
+  String farthestVid;
+  int longestDistance;
+  String vIdsHeard = [];
+  boolean broadcast;
+} 
+  
 class testCar { 
   boolean isDangerous = False;
-  List<eventId> eventIds = new ArrayList<eventId>();
+  eventIds = new HashMap<String, eventId>();
+  String vehicleID = "";
   
     public void requestSim(String options){
       // options
@@ -57,12 +59,12 @@ class testCar {
       // Create socket connection to the simulator
 
       if options = initial{ // all cars have to call this to join the network 
-        send somethin
+        //send somethin
       }
       if options = create_EWM{ // only dangerous car, need simulator to keep track of all event ids
         // parameter = vehicleID
         // simulator assigns characteristic of an event .....
-        set isDangerous for that vehicle to be True
+        set isDangerous to true and eventId.broadcast to true for the given eventID
       }
       if options = carReq { // request for car info to calculate distance to it 
         // parameter = vehicle ID
@@ -70,34 +72,93 @@ class testCar {
 
     }
 
-    public void broadcastEWM(){
-      // tell simulator it's sending to everyone and simulator will decide who will receive the broadcast?
+	
+	public void broadcastEWM(String eventId){ 
+		//This broadcast is simple, there is no time to wait for response, no determining longest distance.
+		//This is just simply a broadcast..that's it
+		simulatorBroadcast("EMW", eventId, vehicleId);
+	}
+	
+	
+    public void primaryBroadcastEWM(){
+		// tell simulator it's sending to everyone and simulator will decide who will receive the broadcast
+/*
+** THIS IS THE PRIMARYBROADCASTEWM() FUNCTION**
+If (duration<t){ 
+	If (received any EWMs from behind  ** THIS IS THE LISTENEWM_RESPONSE() FUNCTION**){   
+		if (event-id is the same) {
+			if (Vid was received before)  {Ignore message}; 
+			Else {
+				record the Vid into the queue and calculate the distance. If distance > prev greatest distance then update the Vid and distance;
+			}
+		}
+		Else {broadcastEWM() with this event-id ;}
+	} 
+	Else {after broadcast an EWM, still wait for a period t ;}
+} 
+
+Else {choose the Vehicle and send ACK; stop broadcast ;  ** THIS IS THE BROADCASTAWK() FUNCTION **  }  */
+
 
 
     }
-    public void broadcastACK(){
-      calculate the vehicleID thats furthest away 
-      and then broadcast(furthestID, eventID)
-
-    }
+	
+    public void broadcastACK(String eventId){
+      //calculate the vehicleID that's furthest away
+	  if(eventIds.containsKey(eventId)) {
+		eventIds.get(eventId).broadcast = false; 
+		simulatorBroadcast("AWK", eventIds.get(eventId).farthestVid, eventId);
+	  }
+	  else { System.out.println("Attempted to Broadcast an ACK for event ID " + eventID + ". But wasn't found in the event list"); }
+	}
+	  
     public void listenEWM(){
+	/* //Every car should always be listening for EWMs...always
+	
+	If (messages==EWM) {   
+		If (the event-id is the same) {discard ;} 
+		Else broadcastEWM() ;
+	} 
+	*/
 
-      if is the eventID the one you broadcast?
-        calculate the furthest vehicle from you 
-        broadcastACK()
-      else  
-        if EWM comes from a car behind you or traveling in the opposite direction
+    }
+    
+	public void listenEWM_Response() {
+	
+/* If (duration<t){ 
+	If (received any EWMs from behind  **THIS IS THE LISTENEWM_RESPONSE() FUNCTION   ){     
+		if (event-id is the same) {
+			if (Vid was received before)  {Ignore message}; 
+			Else {
+				record the Vid into the queue and calculate the distance. If distance > prev greatest distance then update the Vid and distance;
+			}
+		}
+		Else {  broadcastEWM(this new heard event-id)  ;}
+	}  */
+	
+	     if EWM comes from a car behind you or traveling in the opposite direction
         drop it 
         else broadcastEWM(eventID)
-
-    }
-    public void listenACK(){
-      if vehicleID == yours 
-        are you broadcasting that eventID?
-
-      return False otherwise
-        stop broadcasting that eventID! 
-    }
+		
+	}
+	
+	public void listenACK(){
+	//All cars should be listening for an ACK...always
+	
+		/* Else (message==ACK) {  ** THIS IS THE LISTENAWK() FUNCTION **
+		If (vehicle-id==self ‘vehicle-id) {
+			Become a chosen broadcast vehicle aka PRIMARYBROADCASTEWM() ;
+		}
+		Else stop broadcast ;
+	 */
+		if(vehicleId == heardId) {
+			PrimaryBroadcastEWM(heard_eventId);
+		}
+		else {
+			eventIds[heard_eventId].broadcast = false;
+		}
+	}
+}
 
 
 
