@@ -1,12 +1,56 @@
 import java.io.*; 
 import java.net.*; 
-  
-class testCar { 
-  boolean isDangerous = False; 
+class eventId{
+  String Eid;
+  String Vid;
+  int distance;
+} 
 
+/* Pseudo code 1
+//process of broadcast-vehicle-choosing. 
+After broadcast an EWM message with an event-id, 
+wait for period t to receive any messages from behind;
+If (duration<t){ 
+	If (received any EWMs from behind){ 
+		if (event-id is the same) {
+			if (message was received before)  {Ignore message}; 
+			Else {
+				insert the message into the queue; 
+				Calculate the distance ;
+			}
+		}
+		Else {broadcast EWM with this event-id ;}
+	} 
+	Else {after broadcast an EWM, still wait for a period t ;}
+} 
+
+Else {choose the Vehicle and send ACK; stop broadcast ;}  */
+
+/*
+// pseudo code 2 
+If (A vehicle received any messages) { 
+	If (messages==EWM) {
+		If (the event-id is the same) {discard ;} 
+		Else broadcast ;
+	} 
+	Else (message==ACK) {
+		If (vehicle-id==self ‘vehicle-id) {
+			Periodic broadcast EMW; 
+			Become a chosen broadcast vehicle ;
+		}
+		Else stop broadcast ;
+	}
+}
+
+*/
+
+class testCar { 
+  boolean isDangerous = False;
+  List<eventId> eventIds = new ArrayList<eventId>();
+  
     public void requestSim(String options){
       // options
-      // initial == obtain VehicleID, VehiclePOS, VehicleDIR, VehicleVEL
+      // initial == obtain VehicleID, VehiclePOS, VehicleVEL
       // create_EMW == request for unique eventID
       // carReq == request for car info (position)
 
