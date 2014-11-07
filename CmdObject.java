@@ -1,4 +1,6 @@
-public class cmdObject implements java.io.Serializable {
+package commands;
+
+public class CmdObject implements java.io.Serializable {
 	//Serializable allows an object to be represented as a sequence
 	//of bytes. Serializable is used so that this cmdObject can be 
 	//sent via TCP to the simulator. The simulator can convert 
@@ -9,7 +11,7 @@ public class cmdObject implements java.io.Serializable {
 	private int eventID;
 	private float[] pos;
 
-	public cmdObject(String cmd_type, int vehicleID, int eventID, float[] pos){
+	public CmdObject(String cmd_type, int vehicleID, int eventID, float[] pos){
 		this.cmd_type = cmd_type;
 		this.vehicleID = vehicleID;
 		this.eventID = eventID;
