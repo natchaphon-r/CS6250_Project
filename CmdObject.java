@@ -6,6 +6,12 @@ public class CmdObject implements java.io.Serializable {
 	//sent via TCP to the simulator. The simulator can convert 
 	//this sequence of bytes back to the object if it has this class.
 
+	/*
+		cmd_type inlcudes:
+		1) "initialize" > Purpose: to request for vehicleID and pos from Simulator
+		2) "create_EMW" > Purpose: to request for unique eventID from Simulator
+		3) "carinfoReq" > Purpose: to request for car info
+	*/
 	private String cmd_type;
 	private int vehicleID;
 	private int eventID;
