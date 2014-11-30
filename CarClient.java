@@ -1,4 +1,3 @@
-import commands.CmdObject;
 import java.io.*;
 import java.net.*;
 
@@ -10,29 +9,68 @@ public class CarClient{
 	private ObjectOutputStream outputStream = null;
 	private boolean isConnected = false;
 
-	public void requestSim(){
-		while (!isConnected){
-			try{
-				// Test on my own. In reality, will need simulator's IP and port.
-				socket = new Socket("localhost",5000);
-				isConnected = true;
-				outputStream = new ObjectOutputStream(socket.getOutputStream());
-				// Test by sending a request to the simulator
+	public void registerSim(int port){
+		try{
+		DatagramSocket carSocket = new DatagramSocket(port);
+		
+		InetAddress simaddr = InetAddress.getByName("192.168.173.1");
+		
+		int simport = 50000;
 
-				CmdObject command = new CmdObject("initial",null,null,null);
-				outputStream.writeObject(command);
-			}
-			catch(SocketException sockerr){
-				sockerr.printStackTrace();
-			}
-			catch(IOException ioerr){
-				ioerr.printStackTrace();
-			}
+		NetworkInterface ni = NetworkInterface.getByName("wlan0");
+		Enumeration<InetAddress> inetAddresses =  ni.getInetAddresses();
 
+		while(inetAddresses.hasMoreElements()) {
+            InetAddress ia = inetAddresses.nextElement();
+            if(!ia.isLinkLocalAddress()) {
+                System.out.println("IP: " + ia.getHostAddress());
+            }
+        }
+
+		InetAddress caraddr = InetAddress.getLocalHost();
+
+
+		byte[] receiveData = new byte[1024];
+		byte[] sendData = new byte[1024];
+		/*
+		StringBuilder request = new StringBuilder();
+		request.append(ipaddr);
+		request.append(":");
+		request.append(port);
+		*/
+
+		String strIP = caraddr.getHostAddress();
+		String strPORT = Integer.toString(port);
+
+		//Simulator Addr: 192.168.173.1 Port: 50000
+		String reqMSG = "192.168.173.1:50000,"+ strIP + ":" + strPORT;
+		sendData = reqMSG.getBytes();
+
+		System.out.println("Sending to Simulator");
+		DatagramPacket sendRequest = new DatagramPacket(sendData, sendData.length, simaddr, simport);
+		carSocket.send(sendRequest);
+
+		DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
+		carSocket.receive(receivePacket);
+		String fromSim = new String(receivePacket.getData());
+		System.out.println("FROM SIMULATOR:" + fromSim);
+
+		carSocket.close();
+		}catch(IOException e1){
+			System.out.println("UnknownHostError?");
+			e1.printStackTrace();
 		}
+
+
+
+
+
+
+
+
 	}
 	public static void main(String[] args){
 		CarClient client = new CarClient();
-		client.requestSim();
+		client.registerSim(9000);
 	}
 }
