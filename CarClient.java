@@ -102,22 +102,58 @@ public class CarClient{
 			e1.printStackTrace();
 		}
 	}
+	public void helloworld(){
+		System.out.println("HELLOWORLD");
+	}
+
+	public void listenMessage(String type, String sender_pos_x, String sender_pos_y, String sender_dir_x, sender_dir_y, String sender_id, 
+		String ack_car_id, String event_id, String event_ttl) {
+		if(type == 1) {
+			//This is an EWM
+			/*
+			A vehicle ignores an EWM if it comes from behind with respect to its travel direction, but can infer that there is an 
+			emergency event ahead when an EWM comes from the front, and immediately decelerates and broadcasts EWM of its own.
+		 
+			If (the event-id is the same) {discard ;} 
+			Else broadcastEWM() ;
+			*/
+			if(!isBehind(this.position_x, this.position_y, sender_pos_x, sender_pos_y) && movingSameDirection(this.velocity_x, this.velocity_y, sender_dir_x, sender_dir_y) && !eventsHeard.containsKey(event_id)) {
+				event Event = new event(event_id, event_ttl, true);
+				eventsHeard.put(event_id, Event);
+				broadcastEWM(Event);
+			}
+		}
+		else if(type ==2) {
+			//This is an ACK
+			/* Else (message==ACK) {  ** THIS IS THE LISTENAWK() FUNCTION **
+			If (vehicle-id==self ‘vehicle-id) {
+				Become a chosen broadcast vehicle aka PRIMARYBROADCASTEWM() ;
+			}
+			Else stop broadcast ;
+			*/
+			if(this.vehicleID == ack_car_id) {
+				event Event = new event(event_id, event_ttl, true);
+				//primaryBroadcastEWM(Event);
+			}
+			else {
+				eventsHeard.get(event_id).broadcast = false;
+			}
+		}
+			
+	}
 	
 	private class messageListener extends Thread{
 		DatagramSocket sock;
 		DatagramPacket pack;
 		byte[] buf = new byte[256];
-		public messageListener() throws IOException
-		{
+		public messageListener() throws IOException{
 			super("MESSAGELISTENER: STARTING THE THREAD");
 			sock = new DatagramSocket(port);
 		}
-		public void run()
-		{
+		public void run(){
 			//car.hello();
 			System.out.println("INSIDE THREAD.RUN: Start listening");
-			while(true)
-			{
+			while(true){
 				pack = new DatagramPacket(buf, buf.length);
 				try {
 					sock.receive(pack);
@@ -129,16 +165,27 @@ public class CarClient{
 				System.out.println(port+"MESSAGELISTENER:Got message:" + msg);
 				String arrayMSG[] = msg.split(",");
 
-				String msgType = arrayMSG[2];
+				//String msgType = arrayMSG[2];
 				String msgData = arrayMSG[3];
 				/* Type 1 = EWM
 				   Type 2 = ACK*/
-				
-				//if (msgType.equal("1")){
-				//	reactEWM(arrayMSG[2],arrayMSG[3])	
-				}
+				String type = arrayMSG[2];
+				String sender_pos_x;
+				String sender_pos_y;
+				String sender_dir_x;
+				String sender_dir_y;
+				String send_id;
+				String ack_car_id;
+				String event_id;
+				String event_ttl;
+
+				listenMessage(type, sender_pos_x, sender_pos_y, sender_dir_x, sender_dir_y, sender_id, 
+				ack_car_id, event_id, event_ttl)
+
+
 			}
 		
+		}
 	}
 	
 	public CarClient(int portNo) throws IOException{
@@ -148,10 +195,9 @@ public class CarClient{
 		System.out.println("Creating a listener");
 		listener = new messageListener();
 		listener.start();
-
 	}
 	
-	static void displayInterfaceInformation(NetworkInterface netint) throws SocketException {
+	static void displayInterfaceInformation(NetworkInterface netint) throws SocketException{
         out.printf("Display name: %s\n", netint.getDisplayName());
         out.printf("Name: %s\n", netint.getName());
         Enumeration<InetAddress> inetAddresses = netint.getInetAddresses();
