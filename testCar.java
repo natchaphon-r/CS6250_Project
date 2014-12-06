@@ -20,7 +20,6 @@ If (duration<t){
 	} 
 	Else {after broadcast an EWM, still wait for a period t ;}
 } 
-
 Else {choose the Vehicle and send ACK; stop broadcast ;  ** THIS IS THE BROADCASTAWK() FUNCTION **  }  */
 
 /*
@@ -37,7 +36,6 @@ If (A vehicle received any messages) {
 		Else stop broadcast ;
 	}
 }
-
 */
 
 
@@ -46,17 +44,13 @@ import java.net.*;
 
 class event {
 	String ID;
-	int position;
-	String timeStamp;
+	String TTL;
 	boolean broadcast;
-	
-	public event(String eID, int pos, String stamp, boolean broadcastIt) {
+	public event(String eID, int pos, String ttl, boolean broadcast) {
 		ID = eID; 
-		position = pos;
-		timeStamp = stamp;
-		broadcast = broadcastIt;
+		TTL = ttl;
+		broadcast = broadcast;
 	}
-	
 }
 
 class eventCreated{
@@ -70,13 +64,17 @@ class eventCreated{
 } 
 
 class EWMmessage {
-	int senderPosition;
-	int senderDirection;
+	int senderPosition_x;
+	int senderPosition_y;
+	int senderVelocity_x;
+	int senderVelocity_y;
 	String senderVID;
 	event e;
-	public EWMMessage(int sendPos, int SendDir, String Vid, event ev) {
-		senderPosition = sendPos;
-		senderDirection = SendDir;
+	public EWMMessage(int sendPos_x, int sendPos_y, int SendVel_x, int SendVel_y, String Vid, event ev) {
+		senderPosition_x = sendPos_x;
+		senderPosition_y = sendPos_y;
+		senderVelocity_x = SendVel_x;
+		senderVelocity_y = SendVel_y;
 		senderVID = Vid;
 		e = ev;
 	}
@@ -87,15 +85,17 @@ class testCar {
 	eventIDListening = new HashMap<String, eventCreated>(); //Stores all the eventCreated by this car. AKA all the events created by this car
 	eventsHeard = new HashMap<String, event>; //Stores all the events that this car has heard from the simulator. Key = eventID
 	String vehicleID = "";
-	int position; //prob won't be an int
-	int direction; //prob won't be an int
+	int position_x;
+	int position_y;
+	int velocity_x;
+	int velocity_y;
 	
 	int delay = 1; //1ms delay for listening to EWM responses 
 	int listenedTime = 0;
 	int duration = 20;  // keep listening for responses for 20 milliseconds
 
   
-    public void requestSim(String options){
+   /* public void requestSim(String options){
       // options
       // initial == obtain VehicleID, VehiclePOS, VehicleVEL
       // create_EMW == request for unique eventID
@@ -116,7 +116,7 @@ class testCar {
         // parameter = this.vehicleID
       }
 
-    }
+    } */
 
 	
 	public void broadcastEWM(event e){ 
@@ -124,12 +124,12 @@ class testCar {
 		//This is just simply a broadcast..that's it
 		//contains the sender’s position and ID and direction of travel, the ID and location of the event and event timestamp, 
 		//and message lifetime.
-		EWMmessage message = new EWMmessage(this.position, this.direction, this.vehicleID, e);
+		EWMmessage message = new EWMmessage(this.position_x, this.position_y, this.velocity_x, this.velocity_y, this.vehicleID, e);
 		simulatorEMWBroadcast(message);
 	}
 	
 	
-    public void primaryBroadcastEWM(event e){
+   /* public void primaryBroadcastEWM(event e){
 		EWMmessage message = new EWMmessage(this.position, this.direction, this.vehicleID, e);
 		simulatorEMWBroadcast(message);
 		//First we create the new action listener object. 
@@ -145,7 +145,7 @@ class testCar {
 		};
 		new Timer(delay, actionToPreform).start();
 			
-	} 
+	}  */
 	
     public void broadcastACK(event e){
 		//calculate the vehicleID that's furthest away
@@ -156,24 +156,7 @@ class testCar {
 		else { System.out.println("Attempted to Broadcast an ACK for event ID " + eventID + ". But wasn't found in the event list"); }
 	}
 	  
-    public void listenEWM(){
-		/*
-		A vehicle ignores an EWM if it comes from behind with respect to its travel direction, but can infer that there is an 
-		emergency event ahead when an EWM comes from the front, and immediately decelerates and broadcasts EWM of its own.
-		 
 
-			If (the event-id is the same) {discard ;} 
-			Else broadcastEWM() ;
-		*/
-		// Assume that the simulator will return an arrayList with EWM messages called RecievedEWM
-		for(EWMmessage : RecievedEWM) {
-			if(!isBehind(this.position, EWMmessage.senderPosition) && movingSameDirection(this.direction, EWMmessage.senderDirection) && !eventsHeard.containsKey(EWMmessage.e.eventID)) {
-				eventsHeard.put(EWMmessage.e.eID, EWMmessage.e);
-				broadcastEWM(EWMmessage.e);
-			}
-		}
-    }
-    
 	public void listenEWM_Response(event e) {
 	/*
 	If (received any EWMs from behind  **THIS IS THE LISTENEWM_RESPONSE() FUNCTION   ){     
@@ -200,90 +183,40 @@ class testCar {
 		}
 	}
 	
-	public void listenACK(){
-	//All cars should be listening for an ACK...always
-	
-		/* Else (message==ACK) {  ** THIS IS THE LISTENAWK() FUNCTION **
-		If (vehicle-id==self ‘vehicle-id) {
-			Become a chosen broadcast vehicle aka PRIMARYBROADCASTEWM() ;
+	public void listenMessage(String type, String sender_pos_x, String sender_pos_y, String sender_dir_x, sender_dir_y, String sender_id, 
+		String ack_car_id, String event_id, String event_ttl) {
+		if(type == 1) {
+			//This is an EWM
+			/*
+			A vehicle ignores an EWM if it comes from behind with respect to its travel direction, but can infer that there is an 
+			emergency event ahead when an EWM comes from the front, and immediately decelerates and broadcasts EWM of its own.
+		 
+			If (the event-id is the same) {discard ;} 
+			Else broadcastEWM() ;
+			*/
+			if(!isBehind(this.position_x, this.position_y, sender_pos_x, sender_pos_y) && movingSameDirection(this.velocity_x, this.velocity_y, sender_dir_x, sender_dir_y) && !eventsHeard.containsKey(event_id)) {
+				event Event = new event(event_id, event_ttl, true);
+				eventsHeard.put(event_id, Event);
+				broadcastEWM(Event);
+			}
 		}
-		Else stop broadcast ;
-	 */
-		if(vehicleID == heardID) {
-			primaryBroadcastEWM(heardEvent);
+		else if(type ==2) {
+			//This is an ACK
+			/* Else (message==ACK) {  ** THIS IS THE LISTENAWK() FUNCTION **
+			If (vehicle-id==self ‘vehicle-id) {
+				Become a chosen broadcast vehicle aka PRIMARYBROADCASTEWM() ;
+			}
+			Else stop broadcast ;
+			*/
+			if(this.vehicleID == ack_car_id) {
+				event Event = new event(event_id, event_ttl, true);
+				//primaryBroadcastEWM(Event);
+			}
+			else {
+				eventsHeard.get(event_id).broadcast = false;
+			}
 		}
-		else {
-			eventHeard.get(heardEvent.eID).broadcast = false;
-		}
+		
+		
 	}
-}
-
-
-
-    public static void main(String args[]) throws Exception 
-    { 
-
-     try {
-        String serverHostname = new String ("127.0.0.1");
-
-        if (args.length > 0)
-           serverHostname = args[0];
-  
-      BufferedReader inFromUser = 
-        new BufferedReader(new InputStreamReader(System.in)); 
-  
-      DatagramSocket clientSocket = new DatagramSocket(); 
-  
-      InetAddress IPAddress = InetAddress.getByName(serverHostname); 
-      System.out.println ("Attemping to connect to " + IPAddress + 
-                          ") via UDP port 50000");
-  
-      byte[] sendData = new byte[1024]; 
-      byte[] receiveData = new byte[1024]; 
-  
-      System.out.print("Enter Message: ");
-      String sentence = inFromUser.readLine(); 
-      sendData = sentence.getBytes();         
-
-      System.out.println ("Sending data to " + sendData.length + 
-                          " bytes to server.");
-      DatagramPacket sendPacket = 
-         new DatagramPacket(sendData, sendData.length, IPAddress, 50000); 
-  
-      clientSocket.send(sendPacket); 
-  
-      DatagramPacket receivePacket = 
-         new DatagramPacket(receiveData, receiveData.length); 
-  
-      System.out.println ("Waiting for return packet");
-      clientSocket.setSoTimeout(10000);
-
-      try {
-           clientSocket.receive(receivePacket); 
-           String modifiedSentence = 
-               new String(receivePacket.getData()); 
-  
-           InetAddress returnIPAddress = receivePacket.getAddress();
-     
-           int port = receivePacket.getPort();
-
-           System.out.println ("From server at: " + returnIPAddress + 
-                               ":" + port);
-           System.out.println("Message: " + modifiedSentence); 
-
-          }
-      catch (SocketTimeoutException ste)
-          {
-           System.out.println ("Timeout Occurred: Packet assumed lost");
-      }
-  
-      clientSocket.close(); 
-     }
-   catch (UnknownHostException ex) { 
-     System.err.println(ex);
-    }
-   catch (IOException ex) {
-     System.err.println(ex);
-    }
-  } 
-} 
+    
