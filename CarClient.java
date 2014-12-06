@@ -12,13 +12,13 @@ public class CarClient{
 	messageListener listener;
 	DatagramSocket sock = new DatagramSocket();
 	private int port;
+	private String strIP;
 
 	public void registerSim(int port){
 		try{
 			DatagramSocket carSocket = new DatagramSocket(port);
 			InetAddress simaddr = InetAddress.getByName("192.168.173.1");
 			int simport = 50000;
-			String strIP = "";
 
 			// This finds the ip address of interface wlan0.
 			Enumeration<NetworkInterface> nets = NetworkInterface.getNetworkInterfaces();
@@ -33,7 +33,7 @@ public class CarClient{
             			if (i == 1){ 
             				//This is the IP adress
             				InetAddress caraddr = inetAddress;
-            				strIP = (caraddr.toString()).substring(1);
+            				this.strIP = (caraddr.toString()).substring(1);
             				//System.out.println("wlan0 ip is or strIP is " + strIP);
             		}
             		i++;
@@ -61,7 +61,7 @@ public class CarClient{
 		//String reqMSG = "000";
 		sendData = reqMSG.getBytes();
 
-		System.out.println("Sending to Simulator");
+		System.out.println("REGISTERSIM: Sending to Simulator");
 		DatagramPacket sendRequest = new DatagramPacket(sendData, sendData.length, simaddr, simport);
 		carSocket.send(sendRequest);
 
@@ -69,39 +69,33 @@ public class CarClient{
 		carSocket.receive(receivePacket);
 		String fromSim = new String(receivePacket.getData());
 		System.out.println("FROM SIMULATOR:" + fromSim);
+		System.out.println("---------------------------------------------");
 
 		carSocket.close();
 		}catch(IOException e1){
 			System.out.println("UnknownHostError?");
 			e1.printStackTrace();
 		}
-
-
-
 	}
-	
-	public void sendMSG(String message){
+	public void sendMSG(String msgType,String message){
 		try{
 			DatagramSocket carSocket = new DatagramSocket();
 			InetAddress simaddr = InetAddress.getByName("192.168.173.1");
 			int simport = 50000;
-			String strIP = "192.168.173.220";
 
-		
+			byte[] receiveData = new byte[1024];
+			byte[] sendData = new byte[1024];
+			String strPORT = Integer.toString(port);
 
-		byte[] receiveData = new byte[1024];
-		byte[] sendData = new byte[1024];
-		String strPORT = Integer.toString(port);
+			//Simulator Addr: 192.168.173.1 Port: 50000
+			//message should be of form (type,paramaters)
+			String reqMSG = "255.255.255.0:7000,"+ strIP + ":" + strPORT + "," + msgType + "," + message;
+			sendData = reqMSG.getBytes();
 
-		//Simulator Addr: 192.168.173.1 Port: 50000
-		//message should be of form (type,paramaters)
-		String reqMSG = "255.255.255.0:7000,"+ strIP + ":" + strPORT + "," + message;
-		sendData = reqMSG.getBytes();
-
-		System.out.println("Sending to Simulator");
-		DatagramPacket sendRequest = new DatagramPacket(sendData, sendData.length, simaddr, simport);
-		carSocket.send(sendRequest);
-		carSocket.close();
+			System.out.println("Sending to Simulator");
+			DatagramPacket sendRequest = new DatagramPacket(sendData, sendData.length, simaddr, simport);
+			carSocket.send(sendRequest);
+			carSocket.close();
 
 		}catch(IOException e1){
 			System.out.println("UnknownHostError?");
@@ -115,11 +109,13 @@ public class CarClient{
 		byte[] buf = new byte[256];
 		public messageListener() throws IOException
 		{
-			super("message listener");
+			super("MESSAGELISTENER: STARTING THE THREAD");
 			sock = new DatagramSocket(port);
 		}
 		public void run()
 		{
+			//car.hello();
+			System.out.println("INSIDE THREAD.RUN: Start listening");
 			while(true)
 			{
 				pack = new DatagramPacket(buf, buf.length);
@@ -130,15 +126,29 @@ public class CarClient{
 					e1.printStackTrace();
 				}
 				String msg = (new String(pack.getData())).trim();
-				System.out.println("Got message:" + msg) ;
+				System.out.println(port+"MESSAGELISTENER:Got message:" + msg);
+				String arrayMSG[] = msg.split(",");
+
+				String msgType = arrayMSG[2];
+				String msgData = arrayMSG[3];
+				/* Type 1 = EWM
+				   Type 2 = ACK*/
+				
+				//if (msgType.equal("1")){
+				//	reactEWM(arrayMSG[2],arrayMSG[3])	
+				}
 			}
-		}
+		
 	}
 	
 	public CarClient(int portNo) throws IOException{
 		this.port = portNo;
+		this.registerSim(this.port);
+		
+		System.out.println("Creating a listener");
 		listener = new messageListener();
 		listener.start();
+
 	}
 	
 	static void displayInterfaceInformation(NetworkInterface netint) throws SocketException {
@@ -158,35 +168,7 @@ public class CarClient{
 		CarClient client4 = new CarClient(9003);
 		CarClient client5 = new CarClient(9004);
 		CarClient client6 = new CarClient(9005);
-		
-		//send a message from each car to sim
-		client1.sendMSG("1,register1");
-		client2.sendMSG("1,register2");
-		client3.sendMSG("1,register3");
-		client4.sendMSG("1,register4");
-		client5.sendMSG("1,register5");
-		client6.sendMSG("1,register6");
-		
-		try{
-		Thread.sleep(20);
-		}catch(InterruptedException ie){
-			System.out.println("sleep messed up in main");
-		}
-		
-		//this should broadcast collision ahead to any node within range of client 3
-		client3.sendMSG("1,collisionahead");
-		try{
-			Thread.sleep(20);
-			}catch(InterruptedException ie){
-				System.out.println("sleep messed up in main");
-			}
-		
-		//brodcast an ACK to any node in range of client 2
-		client2.sendMSG("2,this is an ACK");
-		
-		/*
-		Enumeration<NetworkInterface> nets = NetworkInterface.getNetworkInterfaces();
-        for (NetworkInterface netint : Collections.list(nets))
-            displayInterfaceInformation(netint);*/
+
+		client1.sendMSG("1","hi");
 	}
 }
