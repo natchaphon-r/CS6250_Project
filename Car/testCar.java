@@ -66,15 +66,13 @@ class eventCreated{
 class EWMmessage {
 	int senderPosition_x;
 	int senderPosition_y;
-	int senderVelocity_x;
-	int senderVelocity_y;
+	int sender_direction; //negative moving left, positive moving right
 	String senderVID;
 	event e;
-	public EWMMessage(int sendPos_x, int sendPos_y, int SendVel_x, int SendVel_y, String Vid, event ev) {
+	public EWMMessage(int sendPos_x, int sendPos_y, int direction, String Vid, event ev) {
 		senderPosition_x = sendPos_x;
 		senderPosition_y = sendPos_y;
-		senderVelocity_x = SendVel_x;
-		senderVelocity_y = SendVel_y;
+		sender_direction = direction;
 		senderVID = Vid;
 		e = ev;
 	}
@@ -87,8 +85,7 @@ class testCar {
 	String vehicleID = "";
 	int position_x;
 	int position_y;
-	int velocity_x;
-	int velocity_y;
+	int direction;
 	
 	int delay = 1; //1ms delay for listening to EWM responses 
 	int listenedTime = 0;
@@ -124,7 +121,7 @@ class testCar {
 		//This is just simply a broadcast..that's it
 		//contains the sender’s position and ID and direction of travel, the ID and location of the event and event timestamp, 
 		//and message lifetime.
-		EWMmessage message = new EWMmessage(this.position_x, this.position_y, this.velocity_x, this.velocity_y, this.vehicleID, e);
+		EWMmessage message = new EWMmessage(this.position_x, this.position_y, this.direction, this.vehicleID, e);
 		simulatorEMWBroadcast(message);
 	}
 	
@@ -183,7 +180,7 @@ class testCar {
 		}
 	}
 	
-	public void listenMessage(String type, String sender_pos_x, String sender_pos_y, String sender_dir_x, sender_dir_y, String sender_id, 
+	public void listenMessage(String type, String sender_pos_x, String sender_pos_y, String sender_direction, String sender_id, 
 		String ack_car_id, String event_id, String event_ttl) {
 		if(type == 1) {
 			//This is an EWM
@@ -194,7 +191,7 @@ class testCar {
 			If (the event-id is the same) {discard ;} 
 			Else broadcastEWM() ;
 			*/
-			if(!isBehind(this.position_x, this.position_y, sender_pos_x, sender_pos_y) && movingSameDirection(this.velocity_x, this.velocity_y, sender_dir_x, sender_dir_y) && !eventsHeard.containsKey(event_id)) {
+			if(!isBehind(this.position_x, this.position_y, sender_pos_x, sender_pos_y) && movingSameDirection(this.direction, sender_direction) && !eventsHeard.containsKey(event_id)) {
 				event Event = new event(event_id, event_ttl, true);
 				eventsHeard.put(event_id, Event);
 				broadcastEWM(Event);
@@ -216,7 +213,21 @@ class testCar {
 				eventsHeard.get(event_id).broadcast = false;
 			}
 		}
-		
-		
 	}
+	
+	public boolean isBehind(receivingCar_x, receivingCar_y, sender_x, sender_y) {
+		if(recievingCar_x < sender_x) {
+			return true;
+		}
+		else return false;
+	}	
     
+	public boolean movingSameDirection(recievingCar_direction, sender_direction) {
+		if(recievingCar_direction > 0 && sender_direction > 0) {
+			return true;
+		}
+		else if (recievingCar_direction < 0 && sender_direction < 0){
+			return true;
+		}
+		else return false;
+	}
