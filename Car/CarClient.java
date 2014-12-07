@@ -2,9 +2,14 @@ import java.io.*;
 import java.net.*;
 import java.util.*;
 import static java.lang.System.out;
+import java.util.ArrayList;
+import java.util.HashMap;
 
 public class CarClient{
-
+	
+	private HashMap<String, eventCreated> eventIDList = new HashMap<String, eventCreated>(); //store all events created by a car
+	private HashMap<String, event>eventsHeard = new HashMap<String, event>(); 	//store all events heard
+	
 	private Socket socket = null;
 	private ObjectInputStream inputStream = null;
 	private ObjectOutputStream outputStream = null;
@@ -126,7 +131,9 @@ public class CarClient{
 	
 	private class messageListener extends Thread{
 		DatagramSocket sock;
-		String currentEWM[]={"","","","","","","",""}; //type,xpos,ypos,xdir,ydir,ack_car_id,event_id,event_ttl
+		String sentEWM[] = {"","","","","","",""};
+		String currentEWM[]={"","","","","","",""}; //type,xpos,ypos,dir,ack_car_id,event_id,event_ttl
+		String ewmPosDir[]={"","","",""};
 		boolean EWMComplete = false;
 		
 		public messageListener() throws IOException
@@ -157,18 +164,76 @@ public class CarClient{
 				
 				//if it's an EWM message
 				//Extract EWM msg info to propogate and request pos/dir from simulator
-				if (msgType.equals("1")){	
-					//Capture relevant parts of the message
-					currentEWM[0] = arrayMSG[2];//message type
-					currentEWM[5] =	arrayMSG[7];//ack_car_id
-					currentEWM[6] =	arrayMSG[8];//event_id
-					currentEWM[7] =	arrayMSG[9];//event_ttl
+				if (msgType.equals("1")){
+					System.out.println(port+" SAW A NEW EWM!");
+					//check if it's a new EWM ID
+					if(!eventsHeard.containsKey(arrayMSG[8])){
+						//Capture relevant parts of the message
+						sentEWM[0]=arrayMSG[2];//type
+						sentEWM[1]=arrayMSG[3];//xpos
+						sentEWM[2]=arrayMSG[4];//ypos
+						sentEWM[3]=arrayMSG[5];//direction
+						sentEWM[4]=arrayMSG[6];//ack_id
+						sentEWM[5]=arrayMSG[7];//event id 
+						sentEWM[6]=arrayMSG[8];//event ttl
+						
 					
-					//request xpos,ypos,xdir,ydir
-					System.out.println("NOW REQUESTING POSITION INFO");
-					requestPOSDIR();
-					
+						//request xpos,ypos,dir
+						System.out.println(port+"NOW REQUESTING POSITION INFO FOR COMPARISON");
+						requestPOSDIR();
+						
+						//store info for this car 
+						currentEWM[1] = arrayMSG[3]; //x-pos
+						currentEWM[2] = arrayMSG[4]; //y-pos
+						currentEWM[3] = arrayMSG[5]; //currently direction (should just make this direction and modify Adrian func?)
+						//currentEWM[4] = arrayMSG[6]; //currently diff in y coordinate, not used
+						
+						//check if car is behind and moving in the same direction
+						if (isBehind(currentEWM[1],currentEWM[2],sentEWM[1],sentEWM[4]) && movingSameDirection(currentEWM[3],sentEWM[3])){
+							System.out.println("TRYING TO REBROADCAST PACKET");
+							
+							//add to events heard
+							eventsHeard.put(sentEWM[5], new event(sentEWM[5], sentEWM[6], true));
+							
+							//finish building packet for transmission
+							currentEWM[0]=sentEWM[0];
+							currentEWM[4]=sentEWM[4];
+							currentEWM[5]=sentEWM[5];
+							currentEWM[6]=sentEWM[6];
+							
+							
+							//Check if EWM is finished being built
+							for (int i=0; i<currentEWM.length; i++){
+								if (currentEWM[i]==""){
+									EWMComplete=false;
+									break;
+								}else
+									EWMComplete=true;
+							}
+							
+							
+							if (EWMComplete){
+								String EWMString = "";
+								for(int i=0; i<currentEWM.length; i++)
+									EWMString = EWMString + "," + currentEWM[i];
+							
+								//broadcast packet
+								sendMSG(currentEWM[0],EWMString);
+								
+								System.out.println(port+"Ready to broadcast: "+currentEWM[0]+", "+currentEWM[1]+", "
+										+currentEWM[2]+", "+currentEWM[3]+", "+currentEWM[4]+", "+currentEWM[5]+", "
+										+currentEWM[6]+", "+currentEWM[7]+", ");
+								
+								EWMComplete=false;
+							}
+							
+						}
+						
+					}//end of if its an EWM message
+						
+						
 				}
+					
 				
 				//if it's a response to requestPOSDIR (or a registration message response)
 				//insert xpos,ypos etc values into the EWM message being built
@@ -176,27 +241,9 @@ public class CarClient{
 					currentEWM[1] = arrayMSG[3]; //x-pos
 					currentEWM[2] = arrayMSG[4]; //y-pos
 					currentEWM[3] = arrayMSG[5]; //currently direction (should just make this direction and modify Adrian func?)
-					currentEWM[4] = arrayMSG[6]; //currently diff in y coordinate
+					currentEWM[4] = arrayMSG[6]; //currently diff in y coordinate, not used
 				}
 				
-				//Check if EWM is finished being built
-				for (int i=0; i<currentEWM.length; i++){
-					if (currentEWM[i]==""){
-						EWMComplete=false;
-						break;
-					}else
-						EWMComplete=true;
-				}
-				
-				//If EWM is built, send to Adrian code? Broadcast?
-				if(EWMComplete){
-					System.out.println(port+"Ready to broadcast: "+currentEWM[0]+", "+currentEWM[1]+", "
-							+currentEWM[2]+", "+currentEWM[3]+", "+currentEWM[4]+", "+currentEWM[5]+", "
-							+currentEWM[6]+", "+currentEWM[7]+", ");
-					
-					EWMComplete=false;
-					//clear EWM here?
-				}
 				
 				//.info denotes the message originated at the simulator
 				//if (!(msgType.equals("info"))){
@@ -260,22 +307,42 @@ public class CarClient{
         out.printf("\n");
      }
 
+	
+	public boolean isBehind(String receivingCar_x,String receivingCar_y,String sender_x,String sender_y) {
+		if(Double.parseDouble(receivingCar_x) < Double.parseDouble(sender_x)) {
+			return true;
+		}
+		else return false;
+	}	
+	
+	
+	public boolean movingSameDirection(String recievingCar_direction,String sender_direction) {
+		if(Double.parseDouble(recievingCar_direction) > 0 && Double.parseDouble(sender_direction) > 0) {
+			return true;
+		}
+		else if (Double.parseDouble(recievingCar_direction) < 0 && Double.parseDouble(sender_direction) < 0){
+			return true;
+		}
+		else return false;
+	}
+	
+	
 	public static void main(String[] args) throws SocketException,IOException{
-		CarClient client1 = new CarClient(9000);
-		
+		CarClient client1 = new CarClient(9000);	
 		CarClient client2 = new CarClient(9001);	
 		CarClient client3 = new CarClient(9002);
 		CarClient client4 = new CarClient(9003);
 		CarClient client5 = new CarClient(9004);
-		CarClient client6 = new CarClient(9005);
-		CarClient client7 = new CarClient(9006);	
-		CarClient client8 = new CarClient(9007);
-		CarClient client9 = new CarClient(9008);
-		CarClient client10 = new CarClient(9009);
+	
+		try{
+		Thread.sleep(30);
+		}catch(InterruptedException ie){
+			System.out.println("problem sleeping it");
+		}
 
 		//type is not included and will have to be inserted during send
-		//EMW = sender_x_pos, sender_y_pos, sender_dir_x, sender_dir_y, ack_car_id, event_id,event_ttl 
-		String EWM_msg = "500.12,300.41,700.0,900.0,ack_car_id,1,20";
+		//EMW = sender_x_pos, sender_y_pos, direction, ack_car_id, event_id,event_ttl 
+		String EWM_msg = "500.12,300.41,700.0,ack_car_id,1,20";
 		client1.sendMSG("1", EWM_msg);
 	}
 }
