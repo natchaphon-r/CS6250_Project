@@ -18,6 +18,8 @@ public class CarClient{
 	DatagramSocket sock = new DatagramSocket();
 	private int port;
 	private String strIP = "192.168.173.220"; //<--192.168.173.220";
+	
+	static int regCount = 0;
 
 	public void registerSim(){
 		try{
@@ -80,7 +82,7 @@ public class CarClient{
 			String reqMSG = "192.168.173.1:50000,"+ strIP + ":" + strPORT + ",1" + ",randomMessage";
 			sendData = reqMSG.getBytes();
 
-			System.out.println("SENDING pos/dir REQUEST: Sending to Simulator");
+			System.out.println(port+" "+"SENDING pos/dir REQUEST: Sending to Simulator");
 			DatagramPacket sendRequest = new DatagramPacket(sendData, sendData.length, simaddr, simport);
 			carSocket.send(sendRequest);
 
@@ -135,6 +137,7 @@ public class CarClient{
 		String currentEWM[]={"","","","","","",""}; //type,xpos,ypos,dir,ack_car_id,event_id,event_ttl
 		String ewmPosDir[]={"","","",""};
 		boolean EWMComplete = false;
+		boolean isProcessingEWM = false;
 		
 		public messageListener() throws IOException
 		{
@@ -147,6 +150,7 @@ public class CarClient{
 			
 			while(true)
 			{
+				
 				DatagramPacket pack;
 				byte[] buf = new byte[256];
 				pack = new DatagramPacket(buf, buf.length);
@@ -165,9 +169,10 @@ public class CarClient{
 				//if it's an EWM message
 				//Extract EWM msg info to propogate and request pos/dir from simulator
 				if (msgType.equals("1")){
-					System.out.println(port+" SAW A NEW EWM!");
+		
 					//check if it's a new EWM ID
 					if(!eventsHeard.containsKey(arrayMSG[8])){
+						System.out.println(port+" SAW A NEW EWM!");
 						//Capture relevant parts of the message
 						sentEWM[0]=arrayMSG[2];//type
 						sentEWM[1]=arrayMSG[3];//xpos
@@ -180,18 +185,70 @@ public class CarClient{
 					
 						//request xpos,ypos,dir
 						System.out.println(port+"NOW REQUESTING POSITION INFO FOR COMPARISON");
+						isProcessingEWM = true;
 						requestPOSDIR();
 						
+						
+					}//end of if its an EWM message
+						
+						
+				}
+					
+				
+				//if it's a response to requestPOSDIR (or a registration message response)
+				//insert xpos,ypos etc values into the EWM message being built
+				if(msgType.equals("info")){
+					
+					//if it's the last vehicle to register, have it broadcast the original EWM
+					if(regCount==5){
+						regCount=6;
+						System.out.println("9004 PEPARING EWM...");
+						
+						sentEWM[0]="1";//type
+						sentEWM[1]=arrayMSG[3];//xpos
+						sentEWM[2]=arrayMSG[4];//ypos
+						sentEWM[3]=arrayMSG[5];//direction
+						sentEWM[4]="CAR 9004 ID";//ack_id
+						sentEWM[5]="EVENTID1";//event id 
+						sentEWM[6]="TTL 20";//event ttl
+						
+						//sendEWM
+						String MessageString = sentEWM[1];
+						for(int i=2; i<sentEWM.length; i++)
+							MessageString = MessageString + "," + sentEWM[i];
+					
+						//broadcast packet
+						System.out.println("9004 SENDING PACKET EWM...");
+						sendMSG(sentEWM[0],MessageString);
+						
+					}
+					
+					if(!isProcessingEWM){
+					currentEWM[1] = arrayMSG[3]; //x-pos
+					currentEWM[2] = arrayMSG[4]; //y-pos
+					currentEWM[3] = arrayMSG[5]; //currently direction (should just make this direction and modify Adrian func?)
+					currentEWM[4] = arrayMSG[6]; //currently diff in y coordinate, not used
+					}
+					
+					if(isProcessingEWM){
 						//store info for this car 
 						currentEWM[1] = arrayMSG[3]; //x-pos
 						currentEWM[2] = arrayMSG[4]; //y-pos
 						currentEWM[3] = arrayMSG[5]; //currently direction (should just make this direction and modify Adrian func?)
 						//currentEWM[4] = arrayMSG[6]; //currently diff in y coordinate, not used
 						
+						//PRINT DIAGNOSTICS
+						System.out.println(port +" isBehind ="+ isBehind(currentEWM[1],currentEWM[2],sentEWM[1],sentEWM[4]));	
+						System.out.println(port+" ReceiverX: "+currentEWM[1]+", SenderX: "+sentEWM[1]);
+						System.out.println(port+" movingSameDirection = "+movingSameDirection(currentEWM[3],sentEWM[3]));
+						System.out.println(port+" ReceiverDir: "+currentEWM[3]+", SenderDir: "+sentEWM[3]);
+						System.out.println(port+" thinks it should rebroadcast?: "+(isBehind(currentEWM[1],currentEWM[2],sentEWM[1],sentEWM[4]) && movingSameDirection(currentEWM[3],sentEWM[3])));
+						
 						//check if car is behind and moving in the same direction
 						if (isBehind(currentEWM[1],currentEWM[2],sentEWM[1],sentEWM[4]) && movingSameDirection(currentEWM[3],sentEWM[3])){
-							System.out.println("TRYING TO REBROADCAST PACKET");
-							
+							System.out.println(port+"TRYING TO REBROADCAST PACKET");
+						
+						
 							//add to events heard
 							eventsHeard.put(sentEWM[5], new event(sentEWM[5], sentEWM[6], true));
 							
@@ -225,24 +282,17 @@ public class CarClient{
 										+currentEWM[6]+", "+currentEWM[7]+", ");
 								
 								EWMComplete=false;
+								isProcessingEWM=false;
 							}
-							
+						
+						
+						
 						}
 						
-					}//end of if its an EWM message
-						
-						
-				}
-					
+					}//end is processing EWM
 				
-				//if it's a response to requestPOSDIR (or a registration message response)
-				//insert xpos,ypos etc values into the EWM message being built
-				if(msgType.equals("info")){
-					currentEWM[1] = arrayMSG[3]; //x-pos
-					currentEWM[2] = arrayMSG[4]; //y-pos
-					currentEWM[3] = arrayMSG[5]; //currently direction (should just make this direction and modify Adrian func?)
-					currentEWM[4] = arrayMSG[6]; //currently diff in y coordinate, not used
-				}
+				}//end message type = info
+				
 				
 				
 				//.info denotes the message originated at the simulator
@@ -290,7 +340,7 @@ public class CarClient{
 	public CarClient(int portNo) throws IOException {
 		this.port = portNo;
 		this.registerSim();
-		
+		regCount++;
 		System.out.println("Creating a listener");
 		listener = new messageListener();
 		listener.start();
@@ -328,22 +378,52 @@ public class CarClient{
 	
 	
 	public static void main(String[] args) throws SocketException,IOException{
-		CarClient client1 = new CarClient(9000);	
-		CarClient client2 = new CarClient(9001);	
-		CarClient client3 = new CarClient(9002);
-		CarClient client4 = new CarClient(9003);
-		CarClient client5 = new CarClient(9004);
-	
+		CarClient client0 = new CarClient(9000);
+		
 		try{
-		Thread.sleep(30);
-		}catch(InterruptedException ie){
-			System.out.println("problem sleeping it");
-		}
+			Thread.sleep(500);
+			}catch(InterruptedException ie){
+				System.out.println("problem sleeping it");
+			}
 
+		CarClient client1 = new CarClient(9001);	
+		
+		try{
+			Thread.sleep(500);
+			}catch(InterruptedException ie){
+				System.out.println("problem sleeping it");
+			}
+
+		CarClient client2 = new CarClient(9002);
+		
+		try{
+			Thread.sleep(500);
+			}catch(InterruptedException ie){
+				System.out.println("problem sleeping it");
+			}
+
+		CarClient client3 = new CarClient(9003);
+		
+		try{
+			Thread.sleep(500);
+			}catch(InterruptedException ie){
+				System.out.println("problem sleeping it");
+			}
+
+		CarClient client4 = new CarClient(9004);
+		
+		try{
+			Thread.sleep(500);
+			}catch(InterruptedException ie){
+				System.out.println("problem sleeping it");
+			}
+
+	
+	
 		//type is not included and will have to be inserted during send
 		//EMW = sender_x_pos, sender_y_pos, direction, ack_car_id, event_id,event_ttl 
-		String EWM_msg = "500.12,300.41,700.0,ack_car_id,1,20";
-		client1.sendMSG("1", EWM_msg);
+	//	String EWM_msg = "500.12,300.41,700.0,ack_car_id,1,20";
+	//	client0.sendMSG("1", EWM_msg);
 	}
 }
 
