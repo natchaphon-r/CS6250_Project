@@ -245,7 +245,8 @@ public class CarClient{
 						System.out.println(port+" thinks it should rebroadcast?: "+(isBehind(currentEWM[1],currentEWM[2],sentEWM[1],sentEWM[4]) && movingSameDirection(currentEWM[3],sentEWM[3])));
 						
 						//check if car is behind and moving in the same direction
-						if (isBehind(currentEWM[1],currentEWM[2],sentEWM[1],sentEWM[4]) && movingSameDirection(currentEWM[3],sentEWM[3])){
+						//if (isBehind(currentEWM[1],currentEWM[2],sentEWM[1],sentEWM[4]) && movingSameDirection(currentEWM[3],sentEWM[3])){
+						if(movingSameDirection_andIsBehind()) {
 							System.out.println(port+"TRYING TO REBROADCAST PACKET");
 						
 						
@@ -358,20 +359,28 @@ public class CarClient{
      }
 
 	
-	public boolean isBehind(String receivingCar_x,String receivingCar_y,String sender_x,String sender_y) {
+	/*public boolean isBehind(String receivingCar_x,String receivingCar_y,String sender_x,String sender_y) {
 		if(Double.parseDouble(receivingCar_x) < Double.parseDouble(sender_x)) {
 			return true;
 		}
 		else return false;
-	}	
+	} */	
 	
 	
-	public boolean movingSameDirection(String recievingCar_direction,String sender_direction) {
+	public boolean movingSameDirection_andIsBehind(String recievingCar_direction,String sender_direction, String recieving_x, String sending_x) {
 		if(Double.parseDouble(recievingCar_direction) > 0 && Double.parseDouble(sender_direction) > 0) {
-			return true;
+			// Cars moving to the right so if receiving cars x is smaller, then it is behind the EWM
+			if(Double.parseDouble(recieving_x) < Double.parseDouble(sending_x)) {
+				return true;
+			}
+			else return false;
 		}
 		else if (Double.parseDouble(recievingCar_direction) < 0 && Double.parseDouble(sender_direction) < 0){
-			return true;
+			//Cars moving to the left, so if receiving car's x is larger, then it is behind the EWM
+			if(Double.parseDouble(recieving_x) > Double.parseDouble(sending_x)) {
+				return true;
+			}
+			else return false;
 		}
 		else return false;
 	}
