@@ -442,7 +442,104 @@ public class CarClient{
 				System.out.println("problem sleeping it");
 			}
 		
+		CarClient client5 = new CarClient(9005);
+		
+		
+		try{
+			Thread.sleep(500);
+			}catch(InterruptedException ie){
+				System.out.println("problem sleeping it");
+			}
+		
+		CarClient client6 = new CarClient(9006);
+		
+		
+		try{
+			Thread.sleep(500);
+			}catch(InterruptedException ie){
+				System.out.println("problem sleeping it");
+			}
 	
+		CarClient client7 = new CarClient(9007);
+		
+		
+		try{
+			Thread.sleep(500);
+			}catch(InterruptedException ie){
+				System.out.println("problem sleeping it");
+			}
+		
+		CarClient client8 = new CarClient(9008);
+		
+		
+		try{
+			Thread.sleep(500);
+			}catch(InterruptedException ie){
+				System.out.println("problem sleeping it");
+			}
+		
+CarClient client9 = new CarClient(9009);
+		
+		
+		try{
+			Thread.sleep(500);
+			}catch(InterruptedException ie){
+				System.out.println("problem sleeping it");
+			}
+		
+CarClient client10 = new CarClient(9010);
+		
+		
+		try{
+			Thread.sleep(500);
+			}catch(InterruptedException ie){
+				System.out.println("problem sleeping it");
+			}
+		
+CarClient client11 = new CarClient(9011);
+		
+		
+		try{
+			Thread.sleep(500);
+			}catch(InterruptedException ie){
+				System.out.println("problem sleeping it");
+			}
+		
+CarClient client12 = new CarClient(9012);
+		
+		
+		try{
+			Thread.sleep(500);
+			}catch(InterruptedException ie){
+				System.out.println("problem sleeping it");
+			}
+		
+CarClient client13 = new CarClient(9013);
+		
+		
+		try{
+			Thread.sleep(500);
+			}catch(InterruptedException ie){
+				System.out.println("problem sleeping it");
+			}
+		
+CarClient client14 = new CarClient(9014);
+		
+		
+		try{
+			Thread.sleep(500);
+			}catch(InterruptedException ie){
+				System.out.println("problem sleeping it");
+			}
+		
+CarClient client15 = new CarClient(9015);
+		
+		
+		try{
+			Thread.sleep(500);
+			}catch(InterruptedException ie){
+				System.out.println("problem sleeping it");
+			}
 		//type is not included and will have to be inserted during send
 		//EMW = sender_x_pos, sender_y_pos, direction, ack_car_id, event_id,event_ttl 
 		String EWM_msg = client0.registeredX+","+client0.registeredY+","+
